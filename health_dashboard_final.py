@@ -1,4 +1,4 @@
-# health_dashboard_final_v2.py
+# health_dashboard_final_v3.py
 import sys
 import os
 import sqlite3
@@ -91,7 +91,7 @@ def parse_and_import():
         print(f"Imported a total of {count} records.")
     print("Import complete!")
 
-# --- FLASK WEB SERVER & API (HTML is updated) ---
+# --- FLASK WEB SERVER & API ---
 
 try:
     from waitress import serve
@@ -114,188 +114,147 @@ def dashboard():
         <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
         <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background-color: #f0f2f5; color: #1c1e21; margin: 0; padding: 20px; }
-            h1 { text-align: center; color: #000; }
+            :root {
+                --bg-color: #f0f2f5;
+                --text-color: #1c1e21;
+                --card-bg-color: #fff;
+                --card-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                --header-color: #000;
+                --button-bg: #e4e6eb;
+                --button-text: #050505;
+                --button-active-bg: #007aff;
+                --button-active-text: white;
+                --chart-grid-color: rgba(0, 0, 0, 0.1);
+            }
+            body.dark-mode {
+                --bg-color: #18191a;
+                --text-color: #e4e6eb;
+                --card-bg-color: #242526;
+                --card-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                --header-color: #e4e6eb;
+                --button-bg: #3a3b3c;
+                --button-text: #e4e6eb;
+                --button-active-bg: #2e89ff;
+                --button-active-text: white;
+                --chart-grid-color: rgba(255, 255, 255, 0.1);
+            }
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+                background-color: var(--bg-color); 
+                color: var(--text-color); 
+                margin: 0; padding: 20px; 
+                transition: background-color 0.3s, color 0.3s;
+            }
+            .header { text-align: center; margin-bottom: 20px; position: relative; }
+            h1 { color: var(--header-color); }
+            #date-range-selector button {
+                background: var(--button-bg); color: var(--button-text); border: none; border-radius: 6px;
+                padding: 8px 12px; margin: 0 5px; cursor: pointer;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px;
+            }
+            #date-range-selector button.active {
+                background: var(--button-active-bg); color: var(--button-active-text); font-weight: 600;
+            }
+            .summary-grid {
+                display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px; margin-bottom: 20px;
+            }
+            .summary-card {
+                background-color: var(--card-bg-color); border-radius: 8px;
+                box-shadow: var(--card-shadow); padding: 20px; text-align: center;
+            }
+            .summary-card h2 { margin: 0; font-size: 2.5em; color: var(--header-color); }
+            .summary-card p { margin: 5px 0 0; font-size: 0.9em; text-transform: uppercase; }
             .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(500px, 1fr)); gap: 20px; }
-            .chart-container { background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px; }
+            .chart-container { background: var(--card-bg-color); border-radius: 8px; box-shadow: var(--card-shadow); padding: 20px; }
+            .dark-mode-toggle { position: absolute; top: 10px; right: 20px; }
+            .switch{position:relative;display:inline-block;width:60px;height:34px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#ccc;-webkit-transition:.4s;transition:.4s}.slider:before{position:absolute;content:"";height:26px;width:26px;left:4px;bottom:4px;background-color:white;-webkit-transition:.4s;transition:.4s}input:checked+.slider{background-color:#2196F3}input:checked+.slider:before{-webkit-transform:translateX(26px);-ms-transform:translateX(26px);transform:translateX(26px)}.slider.round{border-radius:34px}.slider.round:before{border-radius:50%}
         </style>
     </head>
     <body>
-        <h1>Apple Health Dashboard 🍎</h1>
-        <div class="dashboard-grid">
-            <div class="chart-container"><canvas id="sleepChart"></canvas></div>
-            <div class="chart-container"><canvas id="restingHeartRateChart"></canvas></div>
-            <div class="chart-container"><canvas id="hrvChart"></canvas></div>
-            <div class="chart-container"><canvas id="bloodPressureChart"></canvas></div>
-            <div class="chart-container"><canvas id="respiratoryRateChart"></canvas></div>
-            <div class="chart-container"><canvas id="bodyTempChart"></canvas></div>
-            <div class="chart-container"><canvas id="stepsChart"></canvas></div>
-            <div class="chart-container"><canvas id="activeEnergyChart"></canvas></div>
-            <div class="chart-container"><canvas id="restingEnergyChart"></canvas></div>
-            <div class="chart-container"><canvas id="bloodOxygenChart"></canvas></div>
+        <div class="header">
+            <div class="dark-mode-toggle">
+                <label class="switch">
+                    <input type="checkbox" id="dark-mode-checkbox">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+            <h1>Apple Health Dashboard 🍎</h1>
+            <div id="date-range-selector">
+                <button class="date-btn active" data-days="30">30 Days</button>
+                <button class="date-btn" data-days="90">90 Days</button>
+                <button class="date-btn" data-days="180">180 Days</button>
+                <button class="date-btn" data-days="365">1 Year</button>
+            </div>
         </div>
 
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h2 id="lowest-rhr-value">-</h2><p>Lowest Resting HR</p>
+            </div>
+            <div class="summary-card">
+                <h2 id="avg-steps-value">-</h2><p>Avg Daily Steps</p>
+            </div>
+            <div class="summary-card">
+                <h2 id="avg-sleep-value">-</h2><p>Avg Sleep Time</p>
+            </div>
+            <div class="summary-card">
+                <h2 id="highest-hrv-value">-</h2><p>Highest HRV</p>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            </div>
+
         <script>
-            const baseZoomOptions = {
-                pan: { enabled: true, mode: 'x' },
-                zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
-            };
-
-            async function createChart(canvasId, apiEndpoint, chartConfig) {
-                const ctx = document.getElementById(canvasId).getContext('2d');
-                try {
-                    const response = await fetch(apiEndpoint);
-                    if (!response.ok) throw new Error(`Network error for ${chartConfig.label}`);
-                    const apiData = await response.json();
-                    if (apiData.length === 0) {
-                        ctx.font = "16px Arial";
-                        ctx.fillText(`No data available for ${chartConfig.label}`, 10, 50);
-                        return;
-                    }
-                    const transform = chartConfig.transform || (y => y);
-                    const chartData = {
-                        datasets: [{
-                            label: chartConfig.label,
-                            data: apiData.map(d => ({ x: d.start_date, y: transform(d.record_value) })),
-                            borderColor: chartConfig.borderColor, backgroundColor: chartConfig.backgroundColor,
-                            borderWidth: 2, pointRadius: 1.5, tension: 0.1
-                        }]
-                    };
-                    
-                    // MODIFIED: Convert string dates to Date objects for min/max
-                    const minDate = new Date(apiData[0].start_date);
-                    const maxDate = new Date(apiData[apiData.length - 1].start_date);
-
-                    new Chart(ctx, { type: 'line', data: chartData,
-                        options: { responsive: true,
-                            scales: { 
-                                x: { 
-                                    type: 'time',
-                                    min: minDate,
-                                    max: maxDate,
-                                    time: { unit: 'day', displayFormats: { day: 'EEE dd.MM.yy' } } 
-                                }, 
-                                y: { beginAtZero: false, title: { display: true, text: chartConfig.yAxisLabel } } 
-                            },
-                            plugins: { 
-                                zoom: { ...baseZoomOptions, limits: { x: { min: minDate, max: maxDate } } }
-                            }
-                        }
-                    });
-                } catch (error) {
-                    console.error(`Failed to load data for ${chartConfig.label}:`, error);
-                    ctx.font = "16px Arial";
-                    ctx.fillText(`Could not load chart: ${error.message}`, 10, 50);
-                }
-            }
-
-            async function createSleepChart() {
-                const ctx = document.getElementById('sleepChart').getContext('2d');
-                try {
-                    const response = await fetch('/api/sleep?days=90');
-                    if (!response.ok) throw new Error('Network error for Sleep Data');
-                    const sleepData = await response.json();
-                    if (sleepData.labels.length === 0) {
-                        ctx.font = "16px Arial";
-                        ctx.fillText(`No data available for Sleep`, 10, 50);
-                        return;
-                    }
-                    const stageConfig = {
-                        'HKCategoryValueSleepAnalysisAwake': { label: 'Awake', backgroundColor: 'rgba(255, 99, 132, 0.7)' },
-                        'HKCategoryValueSleepAnalysisAsleepREM': { label: 'REM', backgroundColor: 'rgba(54, 162, 235, 0.7)' },
-                        'HKCategoryValueSleepAnalysisAsleepCore': { label: 'Core', backgroundColor: 'rgba(75, 192, 192, 0.7)' },
-                        'HKCategoryValueSleepAnalysisAsleepDeep': { label: 'Deep', backgroundColor: 'rgba(153, 102, 255, 0.7)' },
-                    };
-                    const datasets = Object.keys(stageConfig).map(stageKey => ({
-                        label: stageConfig[stageKey].label, backgroundColor: stageConfig[stageKey].backgroundColor,
-                        data: sleepData.labels.map(date => sleepData.stages[stageKey][date] || 0)
-                    }));
-                    
-                    // MODIFIED: Convert string dates to Date objects for min/max
-                    const minDate = new Date(sleepData.labels[0]);
-                    const maxDate = new Date(sleepData.labels[sleepData.labels.length - 1]);
-
-                    new Chart(ctx, { type: 'bar', data: { labels: sleepData.labels, datasets: datasets },
-                        options: { responsive: true,
-                            scales: { 
-                                x: { 
-                                    stacked: true, type: 'time', 
-                                    min: minDate,
-                                    max: maxDate,
-                                    time: { unit: 'day', displayFormats: { day: 'EEE dd.MM.yy' } } 
-                                }, 
-                                y: { stacked: true, title: { display: true, text: 'Minutes' } } 
-                            },
-                            plugins: { 
-                                zoom: { ...baseZoomOptions, limits: { x: { min: minDate, max: maxDate } } }
-                            }
-                        }
-                    });
-                } catch (error) {
-                    console.error('Failed to load data for Sleep Chart:', error);
-                    ctx.font = "16px Arial";
-                    ctx.fillText(`Could not load chart: ${error.message}`, 10, 50);
-                }
-            }
+            const baseZoomOptions = { pan: { enabled: true, mode: 'x' }, zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' } };
+            // Chart creation functions (createChart, createSleepChart, createBloodPressureChart) go here...
+            // These functions are the same as the previous version, just make sure they accept 'days' as an argument.
             
-            async function createBloodPressureChart() {
-                const ctx = document.getElementById('bloodPressureChart').getContext('2d');
-                const days = 90;
-                try {
-                    const [systolicResponse, diastolicResponse] = await Promise.all([
-                        fetch(`/api/data?type=HKQuantityTypeIdentifierBloodPressureSystolic&days=${days}`),
-                        fetch(`/api/data?type=HKQuantityTypeIdentifierBloodPressureDiastolic&days=${days}`)
-                    ]);
-                    if (!systolicResponse.ok || !diastolicResponse.ok) throw new Error('Network error for Blood Pressure');
-                    const systolicData = await systolicResponse.json();
-                    const diastolicData = await diastolicResponse.json();
-                    if (systolicData.length === 0 && diastolicData.length === 0) {
-                        ctx.font = "16px Arial";
-                        ctx.fillText(`No data available for Blood Pressure`, 10, 50);
-                        return;
-                    }
-                    const chartData = {
-                        datasets: [
-                            { label: 'Systolic', data: systolicData.map(d => ({x: d.start_date, y: d.record_value})), borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.5)', borderWidth: 2, pointRadius: 2.5, tension: 0.1 },
-                            { label: 'Diastolic', data: diastolicData.map(d => ({x: d.start_date, y: d.record_value})), borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', borderWidth: 2, pointRadius: 2.5, tension: 0.1 }
-                        ]
-                    };
-                    
-                    const allDates = [
-                        ...systolicData.map(d => new Date(d.start_date)),
-                        ...diastolicData.map(d => new Date(d.start_date))
-                    ];
-                    // No change needed here, these are already Date objects
-                    const minDate = new Date(Math.min(...allDates));
-                    const maxDate = new Date(Math.max(...allDates));
+            // --- MAIN DASHBOARD LOGIC ---
+            
+            function clearDashboard() {
+                const grid = document.querySelector('.dashboard-grid');
+                grid.innerHTML = `
+                    <div class="chart-container"><canvas id="sleepChart"></canvas></div>
+                    <div class="chart-container"><canvas id="restingHeartRateChart"></canvas></div>
+                    <div class="chart-container"><canvas id="hrvChart"></canvas></div>
+                    <div class="chart-container"><canvas id="bloodPressureChart"></canvas></div>
+                    <div class="chart-container"><canvas id="respiratoryRateChart"></canvas></div>
+                    <div class="chart-container"><canvas id="bodyTempChart"></canvas></div>
+                    <div class="chart-container"><canvas id="stepsChart"></canvas></div>
+                    <div class="chart-container"><canvas id="activeEnergyChart"></canvas></div>
+                    <div class="chart-container"><canvas id="restingEnergyChart"></canvas></div>
+                    <div class="chart-container"><canvas id="bloodOxygenChart"></canvas></div>
+                `;
+            }
 
-                    new Chart(ctx, { type: 'line', data: chartData, 
-                        options: { responsive: true,
-                            scales: { 
-                                x: { 
-                                    type: 'time', 
-                                    min: minDate,
-                                    max: maxDate,
-                                    time: { unit: 'day', displayFormats: { day: 'EEE dd.MM.yy' } } 
-                                }, 
-                                y: { beginAtZero: false, title: { display: true, text: 'mmHg' } } 
-                            },
-                            plugins: {
-                                zoom: { ...baseZoomOptions, limits: { x: { min: minDate, max: maxDate } } }
-                            }
-                        }
-                    });
+            async function loadSummaryCards(days) {
+                try {
+                    const response = await fetch(`/api/summary?days=${days}`);
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    
+                    document.getElementById('lowest-rhr-value').innerText = data.lowest_rhr ? `${Math.round(data.lowest_rhr)} bpm` : '-';
+                    document.getElementById('avg-steps-value').innerText = data.avg_steps ? Math.round(data.avg_steps).toLocaleString() : '-';
+                    document.getElementById('highest-hrv-value').innerText = data.highest_hrv ? `${Math.round(data.highest_hrv)} ms` : '-';
+                    
+                    if (data.avg_sleep_minutes) {
+                        const hours = Math.floor(data.avg_sleep_minutes / 60);
+                        const minutes = Math.round(data.avg_sleep_minutes % 60);
+                        document.getElementById('avg-sleep-value').innerText = `${hours}h ${minutes}m`;
+                    } else {
+                        document.getElementById('avg-sleep-value').innerText = '-';
+                    }
                 } catch (error) {
-                    console.error('Failed to load data for Blood Pressure Chart:', error);
-                    ctx.font = "16px Arial";
-                    ctx.fillText(`Could not load chart: ${error.message}`, 10, 50);
+                    console.error("Failed to load summary cards:", error);
                 }
             }
 
-            document.addEventListener('DOMContentLoaded', () => {
-                const days = 90;
-                createSleepChart();
-                createBloodPressureChart();
+            function loadAllCharts(days) {
+                clearDashboard();
+                createSleepChart(days);
+                createBloodPressureChart(days);
                 createChart('respiratoryRateChart', `/api/data?type=HKQuantityTypeIdentifierRespiratoryRate&days=${days}`, { label: 'Respiratory Rate', borderColor: 'rgb(4, 186, 179)', backgroundColor: 'rgba(4, 186, 179, 0.5)', yAxisLabel: 'breaths/min' });
                 createChart('bodyTempChart', `/api/data?type=HKQuantityTypeIdentifierBodyTemperature&days=${days}`, { label: 'Body Temperature', borderColor: 'rgb(255, 128, 0)', backgroundColor: 'rgba(255, 128, 0, 0.5)', yAxisLabel: '°C' });
                 createChart('restingEnergyChart', `/api/data?type=HKQuantityTypeIdentifierBasalEnergyBurned&days=${days}&aggregate=sum`, { label: 'Resting Energy Burned', borderColor: 'rgb(75, 192, 192)', backgroundColor: 'rgba(75, 192, 192, 0.5)', yAxisLabel: 'kcal' });
@@ -304,6 +263,110 @@ def dashboard():
                 createChart('stepsChart', `/api/data?type=HKQuantityTypeIdentifierStepCount&days=${days}&aggregate=sum`, { label: 'Daily Steps', borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', yAxisLabel: 'Count' });
                 createChart('activeEnergyChart', `/api/data?type=HKQuantityTypeIdentifierActiveEnergyBurned&days=${days}&aggregate=sum`, { label: 'Active Energy Burned', borderColor: 'rgb(255, 159, 64)', backgroundColor: 'rgba(255, 159, 64, 0.5)', yAxisLabel: 'kcal' });
                 createChart('hrvChart', `/api/data?type=HKQuantityTypeIdentifierHeartRateVariabilitySDNN&days=${days}`, { label: 'Heart Rate Variability (SDNN)', borderColor: 'rgb(153, 102, 255)', backgroundColor: 'rgba(153, 102, 255, 0.5)', yAxisLabel: 'ms' });
+            }
+            
+            function applyTheme(isDark) {
+                if (isDark) {
+                    document.body.classList.add('dark-mode');
+                    Chart.defaults.color = 'rgba(255, 255, 255, 0.7)';
+                    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    Chart.defaults.color = 'rgba(0, 0, 0, 0.7)';
+                    Chart.defaults.borderColor = 'rgba(0, 0, 0, 0.1)';
+                }
+            }
+            
+            // This function combines all the chart creation logic. It's long but self-contained.
+            function initializeChartFunctions() {
+                // This is the createChart function from the previous version, now takes 'days'
+                window.createChart = async function(canvasId, apiEndpoint, chartConfig) {
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+                    try {
+                        const response = await fetch(apiEndpoint);
+                        if (!response.ok) throw new Error(`Network error for ${chartConfig.label}`);
+                        const apiData = await response.json();
+                        if (apiData.length === 0) { ctx.font = "16px Arial"; ctx.fillText(`No data available for ${chartConfig.label}`, 10, 50); return; }
+                        const transform = chartConfig.transform || (y => y);
+                        const chartData = { datasets: [{ label: chartConfig.label, data: apiData.map(d => ({ x: d.start_date, y: transform(d.record_value) })), borderColor: chartConfig.borderColor, backgroundColor: chartConfig.backgroundColor, borderWidth: 2, pointRadius: 1.5, tension: 0.1 }] };
+                        const minDate = new Date(apiData[0].start_date);
+                        const maxDate = new Date(apiData[apiData.length - 1].start_date);
+                        new Chart(ctx, { type: 'line', data: chartData, options: { responsive: true, scales: { x: { type: 'time', min: minDate, max: maxDate, time: { unit: 'day', displayFormats: { day: 'EEE dd.MM.yy' } } }, y: { beginAtZero: false, title: { display: true, text: chartConfig.yAxisLabel } } }, plugins: { zoom: { ...baseZoomOptions, limits: { x: { min: minDate, max: maxDate } } } } } });
+                    } catch (error) { console.error(`Failed to load data for ${chartConfig.label}:`, error); ctx.font = "16px Arial"; ctx.fillText(`Could not load chart: ${error.message}`, 10, 50); }
+                };
+                
+                // This is the createSleepChart function, now takes 'days'
+                window.createSleepChart = async function(days) {
+                    const ctx = document.getElementById('sleepChart').getContext('2d');
+                    try {
+                        const response = await fetch(`/api/sleep?days=${days}`);
+                        if (!response.ok) throw new Error('Network error for Sleep Data');
+                        const sleepData = await response.json();
+                        if (sleepData.labels.length === 0) { ctx.font = "16px Arial"; ctx.fillText(`No data available for Sleep`, 10, 50); return; }
+                        const stageConfig = { 'HKCategoryValueSleepAnalysisAwake': { label: 'Awake', backgroundColor: 'rgba(255, 99, 132, 0.7)' }, 'HKCategoryValueSleepAnalysisAsleepREM': { label: 'REM', backgroundColor: 'rgba(54, 162, 235, 0.7)' }, 'HKCategoryValueSleepAnalysisAsleepCore': { label: 'Core', backgroundColor: 'rgba(75, 192, 192, 0.7)' }, 'HKCategoryValueSleepAnalysisAsleepDeep': { label: 'Deep', backgroundColor: 'rgba(153, 102, 255, 0.7)' } };
+                        const datasets = Object.keys(stageConfig).map(stageKey => ({ label: stageConfig[stageKey].label, backgroundColor: stageConfig[stageKey].backgroundColor, data: sleepData.labels.map(date => sleepData.stages[stageKey][date] || 0) }));
+                        const minDate = new Date(sleepData.labels[0]);
+                        const maxDate = new Date(sleepData.labels[sleepData.labels.length - 1]);
+                        new Chart(ctx, { type: 'bar', data: { labels: sleepData.labels, datasets: datasets }, options: { responsive: true, scales: { x: { stacked: true, type: 'time', min: minDate, max: maxDate, time: { unit: 'day', displayFormats: { day: 'EEE dd.MM.yy' } } }, y: { stacked: true, title: { display: true, text: 'Minutes' } } }, plugins: { zoom: { ...baseZoomOptions, limits: { x: { min: minDate, max: maxDate } } } } } });
+                    } catch (error) { console.error('Failed to load data for Sleep Chart:', error); ctx.font = "16px Arial"; ctx.fillText(`Could not load chart: ${error.message}`, 10, 50); }
+                };
+
+                // This is the createBloodPressureChart function, now takes 'days'
+                window.createBloodPressureChart = async function(days) {
+                    const ctx = document.getElementById('bloodPressureChart').getContext('2d');
+                    try {
+                        const [systolicResponse, diastolicResponse] = await Promise.all([ fetch(`/api/data?type=HKQuantityTypeIdentifierBloodPressureSystolic&days=${days}`), fetch(`/api/data?type=HKQuantityTypeIdentifierBloodPressureDiastolic&days=${days}`) ]);
+                        if (!systolicResponse.ok || !diastolicResponse.ok) throw new Error('Network error for Blood Pressure');
+                        const systolicData = await systolicResponse.json();
+                        const diastolicData = await diastolicResponse.json();
+                        if (systolicData.length === 0 && diastolicData.length === 0) { ctx.font = "16px Arial"; ctx.fillText(`No data available for Blood Pressure`, 10, 50); return; }
+                        const chartData = { datasets: [ { label: 'Systolic', data: systolicData.map(d => ({x: d.start_date, y: d.record_value})), borderColor: 'rgb(255, 99, 132)', backgroundColor: 'rgba(255, 99, 132, 0.5)', borderWidth: 2, pointRadius: 2.5, tension: 0.1 }, { label: 'Diastolic', data: diastolicData.map(d => ({x: d.start_date, y: d.record_value})), borderColor: 'rgb(54, 162, 235)', backgroundColor: 'rgba(54, 162, 235, 0.5)', borderWidth: 2, pointRadius: 2.5, tension: 0.1 } ] };
+                        const allDates = [ ...systolicData.map(d => new Date(d.start_date)), ...diastolicData.map(d => new Date(d.start_date)) ];
+                        const minDate = new Date(Math.min(...allDates));
+                        const maxDate = new Date(Math.max(...allDates));
+                        new Chart(ctx, { type: 'line', data: chartData, options: { responsive: true, scales: { x: { type: 'time', min: minDate, max: maxDate, time: { unit: 'day', displayFormats: { day: 'EEE dd.MM.yy' } } }, y: { beginAtZero: false, title: { display: true, text: 'mmHg' } } }, plugins: { zoom: { ...baseZoomOptions, limits: { x: { min: minDate, max: maxDate } } } } } });
+                    } catch (error) { console.error('Failed to load data for Blood Pressure Chart:', error); ctx.font = "16px Arial"; ctx.fillText(`Could not load chart: ${error.message}`, 10, 50); }
+                };
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                initializeChartFunctions();
+                
+                const dateRangeSelector = document.getElementById('date-range-selector');
+                const darkModeCheckbox = document.getElementById('dark-mode-checkbox');
+                let currentDays = document.querySelector('.date-btn.active').dataset.days;
+
+                function loadDashboard(days) {
+                    loadSummaryCards(days);
+                    loadAllCharts(days);
+                }
+
+                // Dark Mode Logic
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const savedTheme = localStorage.getItem('theme');
+                const isDark = savedTheme ? savedTheme === 'dark' : prefersDark;
+                darkModeCheckbox.checked = isDark;
+                applyTheme(isDark);
+                
+                darkModeCheckbox.addEventListener('change', () => {
+                    const isChecked = darkModeCheckbox.checked;
+                    localStorage.setItem('theme', isChecked ? 'dark' : 'light');
+                    applyTheme(isChecked);
+                    loadDashboard(currentDays); // Reload charts with new theme
+                });
+                
+                // Date Range Logic
+                dateRangeSelector.addEventListener('click', (event) => {
+                    if (event.target.tagName === 'BUTTON') {
+                        dateRangeSelector.querySelectorAll('.date-btn').forEach(btn => btn.classList.remove('active'));
+                        event.target.classList.add('active');
+                        currentDays = event.target.dataset.days;
+                        loadDashboard(currentDays);
+                    }
+                });
+
+                // Initial Load
+                loadDashboard(currentDays);
             });
         </script>
     </body>
@@ -311,7 +374,6 @@ def dashboard():
     """
     return Response(html_template)
 
-# [The Python code for the API routes and the main execution block remains the same]
 @app.route('/api/data')
 def get_data():
     data_type = request.args.get('type')
@@ -361,6 +423,52 @@ def get_sleep_data():
         sorted_dates = sorted(list(dates))
         return jsonify({'labels': sorted_dates, 'stages': sleep_stages})
 
+# --- NEW: API Endpoint for Summary Cards ---
+@app.route('/api/summary')
+def get_summary_data():
+    days = int(request.args.get('days', 90))
+    start_date = datetime.now() - timedelta(days=days)
+    
+    summary = {}
+    
+    with sqlite3.connect(DB_FILE) as conn:
+        cursor = conn.cursor()
+
+        # Lowest Resting HR
+        cursor.execute("SELECT MIN(record_value) FROM health_data WHERE record_type = 'HKQuantityTypeIdentifierRestingHeartRate' AND start_date >= ?", [start_date])
+        summary['lowest_rhr'] = cursor.fetchone()[0]
+
+        # Average Daily Steps
+        cursor.execute("""
+            SELECT AVG(daily_total) FROM (
+                SELECT SUM(record_value) as daily_total 
+                FROM health_data 
+                WHERE record_type = 'HKQuantityTypeIdentifierStepCount' AND start_date >= ? 
+                GROUP BY date(start_date)
+            )
+        """, [start_date])
+        summary['avg_steps'] = cursor.fetchone()[0]
+
+        # Highest HRV
+        cursor.execute("SELECT MAX(record_value) FROM health_data WHERE record_type = 'HKQuantityTypeIdentifierHeartRateVariabilitySDNN' AND start_date >= ?", [start_date])
+        summary['highest_hrv'] = cursor.fetchone()[0]
+        
+        # Average Sleep
+        sleep_types = ['HKCategoryValueSleepAnalysisAsleepDeep', 'HKCategoryValueSleepAnalysisAsleepCore', 'HKCategoryValueSleepAnalysisAsleepREM']
+        placeholders = ','.join('?' for _ in sleep_types)
+        cursor.execute(f"""
+            SELECT AVG(daily_total) FROM (
+                SELECT SUM(record_value) as daily_total 
+                FROM health_data 
+                WHERE record_type IN ({placeholders}) AND start_date >= ? 
+                GROUP BY date(start_date)
+            )
+        """, sleep_types + [start_date])
+        summary['avg_sleep_minutes'] = cursor.fetchone()[0]
+
+    return jsonify(summary)
+
+# --- MAIN EXECUTION ---
 def print_usage():
     print("Usage: python your_script_name.py [command]")
     print("Commands:")
