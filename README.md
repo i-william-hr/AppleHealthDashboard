@@ -1,6 +1,13 @@
 # AppleHealthDashboard
 This takes data from an Apple watch, saves it into a database and then serves a webserver local on port 8080
 
+
+#This has been replaced by v2 which integrates an upload function and better mobile support:
+
+https://github.com/i-william-hr/AppleHealthDashboard-v2/tree/main
+
+#####
+
 #Get data from iPhone
 
 Go into  the Health app - Select your Profile - Select Export all data and save the ZIP file
